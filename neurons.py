@@ -15,8 +15,8 @@ def letterToList(x):
 def listToLetter(x):
   return ascii_lowercase[x]
 
-def printLetterWeights(xs):
-  tuples = [i for i in list(zip(xs,ascii_lowercase)) if i[0] > 0.01] #Remove the ~zeroes
+def printLetterWeights(xs, removeZeros = False):
+  tuples = [i for i in list(zip(xs,ascii_lowercase)) if (i[0] > 0.01 or not removeZeros)] #Remove the ~zeroes
   tuples = sorted(tuples, key=lambda x: (-x[0],x[1])) #Sort reverse by first value, forward by second
   for i in tuples:
     if len(str(i[0])) > 5:
@@ -76,11 +76,11 @@ for i in range(26):
   nOut.append(Neuron([j[i] for j in conn1]))
 
 print("Input values:")
-printLetterWeights(inVals)
+printLetterWeights(inVals, True)
 print("Desired output:")
-printLetterWeights(outDesired)
+printLetterWeights(outDesired, True)
 
-for _ in range(20):
+for _ in range(200):
   for i in conn1:
     for j in i:
       j.update()
@@ -89,11 +89,12 @@ for _ in range(20):
     i.update()
 
   results = [i.value for i in nOut]
-  errors = ((results - outDesired) ** 2) / 2
-  print("Total error: " + str(sum(errors)))
+  errors = results - outDesired
+  totalError = sum((errors ** 2)) / 2
+  print("Total error: " + str(totalError))
 
   for i in range(26):
-    nOut[i].backprop(errors[i], 0.05) #The error is the derivative!  Quadratics are cool
+    nOut[i].backprop(errors[i], 1) #The error is the derivative!  Quadratics are cool
 
 
 results = [i.value for i in nOut]
