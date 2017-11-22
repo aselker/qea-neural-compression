@@ -34,7 +34,7 @@ class Conn:
     self.value = self.source.value * self.weight
 
   def backprop(self, deriv, learnRate):
-    weightDeriv = deriv * self.weight #The derivative of the output of the next neuron, with respect to this conn
+    weightDeriv = deriv * self.source.value #The derivative of the output of the next neuron, with respect to this conn
     self.weight -= weightDeriv * learnRate #Actually adjust the weight
 
 class Neuron:
@@ -45,67 +45,60 @@ class Neuron:
     if not self.inputs:
       return
     
-    total = 0
+    self.total = 0
     for i in self.inputs:
-      total += i.value
+      self.total += i.value
 
-    self.value = logistic(total)
+    self.value = logistic(self.total)
 
-  def backprop(self, deriv, learnRate):
+  def backprop(self, outDeriv, learnRate):
     if not self.inputs:
       return
 
-    #print("Backpropagating with derivative " + str(deriv))
-    inputDeriv = logDeriv(deriv) #Get the derivative of the logistic function, add it to the chain-rule chain
+    inDeriv = outDeriv * logDeriv(self.total) #Get the derivative of the logistic function, add it to the chain-rule chain
     for i in self.inputs:
-      i.backprop(inputDeriv, learnRate)
+      i.backprop(inDeriv, learnRate)
 
 
-def main():
+inVals = np.array(letterToList('a'))
+outDesired = np.array(letterToList('e'))
 
-  inVals = np.array(letterToList('a'))
-  outDesired = np.array(letterToList('e'))
-  
-  nIn = []
-  conn1 = []
-  nOut = []
+nIn = []
+conn1 = []
+nOut = []
 
-  for i in range(26):
-    nIn.append(Neuron(False))
-    nIn[i].value = inVals[i]
-    conn1.append([Conn(nIn[i],1) for _ in range(26)])
+for i in range(26):
+  nIn.append(Neuron(False))
+  nIn[i].value = inVals[i]
+  conn1.append([Conn(nIn[i],1) for _ in range(26)])
 
-  for _ in range(26):
-    nOut.append(Neuron([j[0] for j in conn1]))
+for i in range(26):
+  nOut.append(Neuron([j[i] for j in conn1]))
 
-  print("Input values:")
-  printLetterWeights(inVals)
-  print("Desired output:")
-  printLetterWeights(outDesired)
+print("Input values:")
+printLetterWeights(inVals)
+print("Desired output:")
+printLetterWeights(outDesired)
 
-  for _ in range(10):
-    for i in conn1:
-      for j in i:
-        j.update()
+for _ in range(20):
+  for i in conn1:
+    for j in i:
+      j.update()
 
-    for i in nOut:
-      i.update()
-
-    results = [i.value for i in nOut]
-    errors = ((results - outDesired) ** 2) / 2
-    print("Total error: " + str(sum(errors)))
-  
-    for i in range(26):
-      nOut[i].backprop(errors[i], 0.03) #The error is the derivative!  Quadratics are cool
-
+  for i in nOut:
+    i.update()
 
   results = [i.value for i in nOut]
-  print("Results:")
-  printLetterWeights(results)
-  print("Errors:")
-  printLetterWeights(errors)
+  errors = ((results - outDesired) ** 2) / 2
+  print("Total error: " + str(sum(errors)))
+
+  for i in range(26):
+    nOut[i].backprop(errors[i], 0.05) #The error is the derivative!  Quadratics are cool
 
 
-if __name__ == "__main__":
-  main()
+results = [i.value for i in nOut]
+print("Results:")
+printLetterWeights(results)
+print("Errors:")
+printLetterWeights(errors)
 
