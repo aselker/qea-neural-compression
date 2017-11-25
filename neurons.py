@@ -2,6 +2,8 @@ import numpy as np
 from math import e
 from string import ascii_lowercase
 
+letters = ascii_lowercase + " !\"'()*,-./0123456789:;?_" #Something like ASCII order
+
 def logistic(x):
   return 1/(1 + e**(-x))
 
@@ -9,14 +11,14 @@ def logDeriv(x):
   return logistic(x) * (1 - logistic(x))
 
 def letterToList(x):
-  index = ascii_lowercase.index(x)
+  index = letters.index(x)
   return [0]*index + [1] + [0]*(25-index)
 
 def listToLetter(x):
-  return ascii_lowercase[x]
+  return letters[x]
 
 def printLetterWeights(xs, removeZeros = False):
-  tuples = [i for i in list(zip(xs,ascii_lowercase)) if (i[0] > 0.01 or not removeZeros)] #Remove the ~zeroes
+  tuples = [i for i in list(zip(xs,letters)) if (i[0] > 0.01 or not removeZeros)] #Remove the ~zeroes
   tuples = sorted(tuples, key=lambda x: (-x[0],x[1])) #Sort reverse by first value, forward by second
   for i in tuples:
     if len(str(i[0])) > 5:
