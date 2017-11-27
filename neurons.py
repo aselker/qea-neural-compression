@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np #full of numps
 from math import e
 from string import ascii_lowercase
 
@@ -12,7 +12,7 @@ def logDeriv(x):
 
 def letterToList(x):
   index = letters.index(x)
-  return [0]*index + [1] + [0]*(25-index)
+  return [0]*index + [1] + [0]*(len(letters)-index-1)
 
 def listToLetter(x):
   return letters[x]
@@ -38,6 +38,7 @@ class Conn:
   def backprop(self, deriv, learnRate):
     weightDeriv = deriv * self.source.value #The derivative of the output of the next neuron, with respect to this conn
     self.weight -= weightDeriv * learnRate #Actually adjust the weight
+
 
 class Neuron:
   def __init__(self, inputs):
