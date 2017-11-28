@@ -6,7 +6,7 @@ inVals = np.array(letterToList('a'))
 outDesired = np.array(letterToList('e'))
 """
 
-inputLetters = 3
+inputLetters = 5
 
 nIn = []
 conn1 = []
@@ -80,5 +80,5 @@ with open('moby_dick_short.txt') as f:
   for ngram in ngrams:
     updateAndBackprop(ngram) 
 
-updateAndBackprop('the ', True) #One iteration to print info
+updateAndBackprop('the wh', True) #One iteration to print info
 
