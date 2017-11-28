@@ -28,5 +28,7 @@ def pad(x):
 maxValue = max(map(max,tally_a))
 tally_scaled_a = list(map(lambda x: map(lambda y: pad(round(100 * y / maxValue)), x), tally_a)) #SCALING
 
+print(" "*6 + "   ".join(chars)) #Header
+print("_" * (6 + 4*len(chars)))
 for i in range(len(tally_a)):
   print(chars[i] + " | " + " ".join(tally_scaled_a[i]))
