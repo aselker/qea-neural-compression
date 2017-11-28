@@ -64,17 +64,6 @@ def updateAndBackprop(ngram, doPrint = False):
     nOut[i].backprop(errors[i], 1) #The error is the derivative!  Quadratics are cool
 
 with open('moby_dick_short.txt') as f:
-  """
-  prev_char = ' '
-  i = 0
-  for char in f.read():
-    print(' '*(6-len(str(i))) + str(i) + '    ', end='') #Print iteration count, and padding
-    updateAndBackprop([prev_char] * 3, char, False)
-    prev_char = char
-    if i == 1000:
-      break
-    i += 1
-  """
   text = f.read()[0:999]
   ngrams = [ text[i:i+inputLetters+1] for i in range(len(text) - inputLetters - 1) ] # Each should be inputLetters+1 chars long
   for ngram in ngrams:
