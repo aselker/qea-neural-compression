@@ -50,11 +50,11 @@ class NeuronBlock:
 
   def evaluate(self, inputs):
     self.inputs = np.array(inputs) #Does nothing if the input is already an np.array
-    self.outputs = np.array(list(map(logistic, np.dot(self.inputs, self.weights)))) #Multiply by weights, run logistic function
+    self.outputs = logistic(np.dot(self.inputs, self.weights))
     return self.outputs
 
   def backprop(self, outDerivs, learnRate):
-    connDerivs = outDerivs * np.array(list(map(logDeriv, self.outputs)))
+    connDerivs = outDerivs * logDeriv(self.outputs)
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
     #print("Weight derivatives: ")
     #print(weightDerivs)

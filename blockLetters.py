@@ -9,7 +9,7 @@ firstLayer = NeuronBlock(len(letters) * inputLetters, hiddenLayer)
 secondLayer = NeuronBlock(hiddenLayer, len(letters))
 
 with open('moby_dick_cleaned.txt') as f:
-  text = f.read()[1:8000]
+  text = f.read()[1:3000]
   #text = "abcdefgh" * 300
   trainingPairs = textToTrainingPairs(text, inputLetters) # Each pair is (ngram, next letter), in list form
   for trainingPair in trainingPairs:
