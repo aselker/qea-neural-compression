@@ -13,8 +13,11 @@ def letterToList(x):
   index = letters.index(x)
   return [0]*index + [1] + [0]*(len(letters)-index-1)
 
-def listToLetter(x):
-  return letters[x]
+def listToLetters(xs):
+  tuples = [ i for i in list(zip(xs,letters)) ]
+  tuples = sorted(tuples, key=lambda x: (-x[0],x[1])) #Sort reverse by first value, forward by second
+  return [x[1] for x in tuples] #Return just the letters
+  
 
 def printLetterWeights(xs, removeZeros = False):
   tuples = [i for i in list(zip(xs,letters)) if (i[0] > 0.01 or not removeZeros)] #Remove the ~zeroes
@@ -32,7 +35,7 @@ def ngramToList(ngram):
   return np.array(out).flatten()
 
 def textToTrainingPairs(text, n):
-  return [ (ngramToList(text[i:i+n]), letterToList(text[i+n])) for i in range(len(text) - n) ]
+  return [ (ngramToList(text[i:i+n]), text[i+n]) for i in range(len(text) - n) ]
 
 class NeuronBlock:
   def __init__(self, numInputs, numOutputs):

@@ -11,10 +11,14 @@ with open('moby_dick_short.txt') as f:
   trainingPairs = textToTrainingPairs(text, inputLetters) # Each pair is (ngram, next letter), in list form
   for trainingPair in trainingPairs:
     firstLayer.evaluate(trainingPair[0])
-    errors = firstLayer.outputs - trainingPair[1]
+    #errors = firstLayer.outputs - trainingPair[1]
+    errorsDeriv = firstLayer.outputs #Most of the error derivatives are just the letter scores, cause most should be zero
+    errorsDeriv[letters.index(trainingPair[1])] = -listToLetters(firstLayer.outputs).index(trainingPair[1]) #The one that should be ranked first should have a negative derivative
 
-    totalError = sum((errors ** 2)) / 2
-    print("Total error: " + str(totalError)[:6] + '    ' + '#'*int(totalError*10)) #Print total error, with a bar to represent visually
+    #totalError = sum((errorsDeriv ** 2)) / 2
+    #print("Total error: " + str(totalError)[:6] + '    ' + '#'*int(totalError*10)) #Print total error, with a bar to represent visually
+    print("Total error: " + str(sum(errorsDeriv))[:6] + '    ' + '#'*int(sum(errorsDeriv)*10)) #Print total error, with a bar to represent visually
+
     
-    firstLayer.backprop(errors, learningRate)
+    firstLayer.backprop(errorsDeriv, learningRate)
   
