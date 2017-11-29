@@ -1,8 +1,7 @@
 import numpy as np #full of numps
 from math import e
 
-#letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
-letters = "abcde" #For testing
+letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
 
 def logistic(x):
   return 1/(1 + e**(-x))
@@ -50,10 +49,8 @@ class NeuronBlock:
     return self.outputs
 
   def backprop(self, outDerivs, learnRate):
-    print("Out derivatives:  " + str(outDerivs[0:4]))
-    connDerivs = np.array(list(map(logDeriv, outDerivs)))
-    print("Conn derivatives: " + str(connDerivs[0:4]))
+    connDerivs = outDerivs * np.array(list(map(logDeriv, self.outputs)))
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
-    print("Weight derivatives: " + str(weightDerivs))
+    #print("Weight derivatives:\n" + str(weightDerivs))
     self.weights -= weightDerivs * learnRate
-
+    #print("Weights:\n" + str(self.weights))

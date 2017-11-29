@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 from neuronBlock import *
 
-inputLetters = 3
-learningRate = .1
+inputLetters = 6
+learningRate = 0.1
 
 firstLayer = NeuronBlock(len(letters) * inputLetters, len(letters))
 
 with open('moby_dick_short.txt') as f:
-  #text = f.read()
-  text = "a" * 100
+  text = f.read()
   trainingPairs = textToTrainingPairs(text, inputLetters) # Each pair is (ngram, next letter), in list form
   for trainingPair in trainingPairs:
     firstLayer.evaluate(trainingPair[0])
@@ -18,3 +17,4 @@ with open('moby_dick_short.txt') as f:
     print("Total error: " + str(totalError)[:6] + '    ' + '#'*int(totalError*10)) #Print total error, with a bar to represent visually
     
     firstLayer.backprop(errors, learningRate)
+  
