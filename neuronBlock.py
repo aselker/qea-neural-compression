@@ -56,8 +56,8 @@ class NeuronBlock:
   def backprop(self, outDerivs, learnRate):
     connDerivs = outDerivs * np.array(list(map(logDeriv, self.outputs)))
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
-    print("Weight derivatives: ")
-    print(weightDerivs)
+    #print("Weight derivatives: ")
+    #print(weightDerivs)
     inputDerivs = np.dot(self.weights, connDerivs)
 
     self.weights -= weightDerivs * learnRate
