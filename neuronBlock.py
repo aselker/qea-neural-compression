@@ -1,5 +1,6 @@
 import numpy as np #full of numps
 from math import e
+from random import random
 
 letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
 
@@ -35,25 +36,30 @@ def ngramToList(ngram):
   return np.array(out).flatten()
 
 def textToTrainingPairs(text, n):
-  return [ (ngramToList(text[i:i+n]), text[i+n]) for i in range(len(text) - n) ]
+  return [ (ngramToList(text[i:i+n]), letterToList(text[i+n])) for i in range(len(text) - n) ]
 
 class NeuronBlock:
   def __init__(self, numInputs, numOutputs):
     self.inputs = np.array([0.] * numInputs)
     self.outputs = np.array([0.] * numOutputs)
-    self.weights = np.array([[1.] * numOutputs] * numInputs)
+    #self.weights = np.array([[1.] * numOutputs] * numInputs)
+    self.weights = np.array([[random() for _ in range(numOutputs)] for _ in range(numInputs)])
 
   def __str__(self):
     return "Weights:\n" + str(self.weights) + "\nLast output:\n" + str(self.outputs)
 
   def evaluate(self, inputs):
-    self.inputs = np.array(inputs) #Does nothing if the input is already an array
+    self.inputs = np.array(inputs) #Does nothing if the input is already an np.array
     self.outputs = np.array(list(map(logistic, np.dot(self.inputs, self.weights)))) #Multiply by weights, run logistic function
     return self.outputs
 
   def backprop(self, outDerivs, learnRate):
     connDerivs = outDerivs * np.array(list(map(logDeriv, self.outputs)))
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
-    #print("Weight derivatives:\n" + str(weightDerivs))
+    print("Weight derivatives: ")
+    print(weightDerivs)
+    inputDerivs = np.dot(self.weights, connDerivs)
+
     self.weights -= weightDerivs * learnRate
-    #print("Weights:\n" + str(self.weights))
+    return inputDerivs
+
