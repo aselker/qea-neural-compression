@@ -97,25 +97,31 @@ class RecurrentNet:
       self.midputs += outputs[:len(inputs)]
       self.states[i] = outputs[len(inputs):]
     
-    return self.midputs.pop() #The last 'midputs' is the output, and it's not worth saving so we pop it
+    return self.midputs[-1] #The last 'midputs' is the output
 
   # Get the derivatives for training one generation of the network. For use with a more complex, recurrence-conscious training algorithm.
-  def getDerivs(stateDerivs, outputDeriv):
+  def getDerivs(midputs, statesIn, statesOut, stateDerivsOut, outputDeriv):
 
     weightDerivs = [] #List of 2d arrays of weight derivatives. Each adjusts one layer.
-    stateDerivsOut = [] #List of 1d arrays, representing the state derivatives for the *previous* generation
-    stateDerivs.reverse() #It has to go top to bottom.
-    
+    stateDerivsIn = [] #List of 1d arrays, representing the state derivatives for the *previous* generation (thus "in")
+    # outputDeriv is initialized by the argument, but changes every iteration.
 
-    # Start at the top, go down. At each point, find derivatives, save them and pass some down.
-    for (layer, stateDeriv) in zip(self.layers, stateDerivs):
-      (weightDeriv, inputDeriv) = layer.backprop(np.concatenate([outputDeriv, stateDeriv])) 
+    for i in reversed(range(len(self.layers))):
+      self.layers[i].inputs = np.concatenate([midputs[i], statesIn[i]])
+      self.layers[i].outputs = np.concatenate([midputs[i+1], statesOut[i]])
+      (weightDeriv, inputDeriv) = layer.backprop( np.concatenate([outputDeriv, stateDerivsOut[i]]) )
+
       weightDerivs += weightDeriv
-      outputDeriv = inputDeriv[:len(inputDeriv)-len(stateDeriv)] # Check this! ###############################################################################################
-      stateDerivsOut += inputDeriv[len(inputDeriv)-len(stateDeriv):]
+      outputDeriv = inputDeriv[:len(inputDeriv)-len(stateDeriv)]
+      stateDerivsIn += inputDeriv[len(inputDeriv)-len(stateDeriv):]
 
+    weightDerivs.reverse()
+    stateDerivsIn.reverse()
 
-  def runAndTrain(inputs, k1, k2, learnRate):
+    return(stateDerivsIn, weightDerivs)
+  
+
+  def runAndTrain(inputs, targets, k1, k2, learnRate):
     
     # First, initialize the state. Might train this at some later date?
     self.states = self.initStates
@@ -125,15 +131,30 @@ class RecurrentNet:
     trainTimer = 0 #Iterations since last training; when this hits k1 we train
 
     # Now loop through the inputs, evaluating, saving states, and sometimes training.
-    for i in inputs:
-      outputs = self.step(inputs) #Do the computation
+    for (ipt,target) in zip(inputs, targets):
+      output = self.step(ipt) #Do the computation
 
-      record.insert(0, (self.states, self.midputs)) #Add to the records
+      errorDeriv = output - target #Quadratic error function -> linear derivative, like before
+
+      record.insert(0, (self.midputs, self.states)) #Add to the records
       if len(record) > k2: #If we have enough records, start throwing out the old ones
         record = record[:k2]
 
-      trainTimer++
+      trainTimer += 1
       if trainTimer >= k1:
         trainTimer = 0
 
-
+      stateDerivs = [ np.array([0.] * len(x)) for x in self.states ] #The derivatives of the state outputs are zero to start, because they go off into the future
+      weightDerivss = [] #Double plural ftw
+      
+      for i in range(len(record)):
+        midputs = record[i][0]
+        statesIn = record[i+1][0]
+        statesOut = record[i][0]
+        if i == 0:
+          outputDeriv = errorDeriv 
+        else:
+          outputDeriv = np.array([0] * len(midputs[-1])) #If not the last, don't factor in outputs.
+                                                         #  This means that this entire training routine trains only for the most recent output(!)
+        (stateDerivs, weightDerivs) = getDerivs(midputs, statesIn, statesOut, stateDerivs, )
+        weightDerivss += [weightDerivs]
