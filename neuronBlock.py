@@ -54,28 +54,21 @@ class NeuronBlock:
     self.outputs = logistic(np.dot(self.inputs, self.weights))
     return self.outputs
 
-  def backprop(self, outDerivs, learnRate):
+  # Backpropagate, find the derivatives for internal weights and for inputs. Don't actually change anything.
+  def backprop(self, outDerivs):
     connDerivs = outDerivs * logDeriv(self.outputs)
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
-    #print("Weight derivatives: ")
-    #print(weightDerivs)
     inputDerivs = np.dot(self.weights, connDerivs)
 
-    self.weights -= weightDerivs * learnRate
-    return inputDerivs
+    return (weightDerivs, inputDerivs)
 
 
-# Defines a recurrent neural net.
+# Defines a multi-layered recurrent neural net.
 # numInputs is the number of inputs to the first layer.
 # layerSpecs is a list of tuples.  Each tuple is (recurrent in/outputs, connections to the next layer).
 # the last item in layerSpecs also defines the output neuron count (its next-layer connections go to the output).
 class RecurrentNet:
-  def __init__(self, numInputs, layerSpecs, k1, k2, learnRate):
-
-    # Set some constants
-    self.k1 = k1
-    self.k2 = k2
-    self.learnRate = learnRate
+  def __init__(self, numInputs, layerSpecs):
 
     # Create the layers
     self.layers = []
@@ -85,20 +78,62 @@ class RecurrentNet:
       nOut = layerSpecs[i][1]
       layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
 
-    # Create the transferred-state arrays for recurrence
-    self.states = []
+    # Create starting points for the transferred-state arrays for recurrence
+    self.initStates = []
     for spec in layerSpecs:
-      self.states += [ np.array([random() for _ in range(spec[0])]) ] #Each is initialized with random numbers, to be optimized later
+      self.initStates += [ np.array([random() for _ in range(spec[0])]) ] #Each is initialized with random numbers. Later this might get trained.
 
   # "Step" the network, taking input, consuming and re-producing state, and producting output. Does not train.
+  # This changes two pieces of state internal to the object: 'states' is the recurrent thing, and 'midputs' is a record of the outputs of each layer which
+  #   are fed into the next layer. Both should be saved if using this to backpropagate. If just using this to evaluate the network, you can ignore both, 
+  #   except for initializing 'states' and not modifying it between 'step' calls.
   def step(inputs):
-    # In here, 'inputs' is the non-recurrent inputs to the next layer
+    self.midputs = [inputs]
+    # In here, 'midputs' is the non-recurrent inputs to the next layer
     for i in range(len(self.layers)): #Can't use 'for layer,state in layers,states' cause we have to modify states
       # Do the evaluation
-      outputs = layers[i].evaluate(inputs + state[i])
+      outputs = layers[i].evaluate(np.concatenate([self.midputs[i], self.states[i]]))
       # Split the outputs into inputs for the next layer, and new state
-      inputs = outputs[:len(inputs)]
-      state[i] = outputs[len(inputs):]
+      self.midputs += outputs[:len(inputs)]
+      self.states[i] = outputs[len(inputs):]
     
-    return inputs #The "inputs" for the next layer are actually the outputs of the whole stack.
+    return self.midputs.pop() #The last 'midputs' is the output, and it's not worth saving so we pop it
+
+  # Get the derivatives for training one generation of the network. For use with a more complex, recurrence-conscious training algorithm.
+  def getDerivs(stateDerivs, outputDeriv):
+
+    weightDerivs = [] #List of 2d arrays of weight derivatives. Each adjusts one layer.
+    stateDerivsOut = [] #List of 1d arrays, representing the state derivatives for the *previous* generation
+    stateDerivs.reverse() #It has to go top to bottom.
+    
+
+    # Start at the top, go down. At each point, find derivatives, save them and pass some down.
+    for (layer, stateDeriv) in zip(self.layers, stateDerivs):
+      (weightDeriv, inputDeriv) = layer.backprop(np.concatenate([outputDeriv, stateDeriv])) 
+      weightDerivs += weightDeriv
+      outputDeriv = inputDeriv[:len(inputDeriv)-len(stateDeriv)] # Check this! ###############################################################################################
+      stateDerivsOut += inputDeriv[len(inputDeriv)-len(stateDeriv):]
+
+
+  def runAndTrain(inputs, k1, k2, learnRate):
+    
+    # First, initialize the state. Might train this at some later date?
+    self.states = self.initStates
+    
+    # Next, set up some variables for training...
+    record = [] #Tuples of the form (states, midputs), from a particular generation
+    trainTimer = 0 #Iterations since last training; when this hits k1 we train
+
+    # Now loop through the inputs, evaluating, saving states, and sometimes training.
+    for i in inputs:
+      outputs = self.step(inputs) #Do the computation
+
+      record.insert(0, (self.states, self.midputs)) #Add to the records
+      if len(record) > k2: #If we have enough records, start throwing out the old ones
+        record = record[:k2]
+
+      trainTimer++
+      if trainTimer >= k1:
+        trainTimer = 0
+
 
