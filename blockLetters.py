@@ -34,7 +34,6 @@ with open('moby_dick_cleaned.txt') as f:
     firstLayer.backprop(hiddenDerivs, learningRate)
 
   lastN = list(text[0:inputLetters])
-
   for _ in range(100):
     prediction = listToLetters(secondLayer.evaluate(firstLayer.evaluate(ngramToList(lastN))))
     #if prediction[0] == " ":

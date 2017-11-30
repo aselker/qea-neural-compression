@@ -38,6 +38,7 @@ def ngramToList(ngram):
 def textToTrainingPairs(text, n):
   return [ (ngramToList(text[i:i+n]), letterToList(text[i+n])) for i in range(len(text) - n) ]
 
+
 class NeuronBlock:
   def __init__(self, numInputs, numOutputs):
     self.inputs = np.array([0.] * numInputs)
@@ -62,4 +63,42 @@ class NeuronBlock:
 
     self.weights -= weightDerivs * learnRate
     return inputDerivs
+
+
+# Defines a recurrent neural net.
+# numInputs is the number of inputs to the first layer.
+# layerSpecs is a list of tuples.  Each tuple is (recurrent in/outputs, connections to the next layer).
+# the last item in layerSpecs also defines the output neuron count (its next-layer connections go to the output).
+class RecurrentNet:
+  def __init__(self, numInputs, layerSpecs, k1, k2, learnRate):
+
+    # Set some constants
+    self.k1 = k1
+    self.k2 = k2
+    self.learnRate = learnRate
+
+    # Create the layers
+    self.layers = []
+    for i in range(len(layerSpecs)):
+      nIn = numInputs if i == 0 else layerSpecs[i-1][0]
+      nRec = layerSpecs[i][0]
+      nOut = layerSpecs[i][1]
+      layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
+
+    # Create the transferred-state arrays for recurrence
+    self.states = []
+    for spec in layerSpecs:
+      self.states += [ np.array([random() for _ in range(spec[0])]) ] #Each is initialized with random numbers, to be optimized later
+
+  # "Step" the network, taking input, consuming and re-producing state, and producting output. Does not train.
+  def step(inputs):
+    # In here, 'inputs' is the non-recurrent inputs to the next layer
+    for i in range(len(self.layers)): #Can't use 'for layer,state in layers,states' cause we have to modify states
+      # Do the evaluation
+      outputs = layers[i].evaluate(inputs + state[i])
+      # Split the outputs into inputs for the next layer, and new state
+      inputs = outputs[:len(inputs)]
+      state[i] = outputs[len(inputs):]
+    
+    return inputs #The "inputs" for the next layer are actually the outputs of the whole stack.
 
