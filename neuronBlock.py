@@ -137,8 +137,8 @@ class RecurrentNet:
       errorDeriv = output - target #Quadratic error function -> linear derivative, like before
 
       record.insert(0, (self.midputs, self.states)) #Add to the records
-      if len(record) > k2: #If we have enough records, start throwing out the old ones
-        record = record[:k2]
+      if len(record) > k2+1: #If we have enough records, start throwing out the old ones
+        record = record[:k2+1] #We keep k2+1 records for some reason. Too tired to figure out right now.
 
       trainTimer += 1
       if trainTimer >= k1:
@@ -147,7 +147,7 @@ class RecurrentNet:
         stateDerivs = [ np.array([0.] * len(x)) for x in self.states ] #The derivatives of the state outputs are zero to start, because they go off into the future
         weightDerivss = [] #Double plural ftw
         
-        for i in range(len(record)):
+        for i in range(k2):
           midputs = record[i][0]
           statesIn = record[i+1][0]
           statesOut = record[i][0]
@@ -158,3 +158,6 @@ class RecurrentNet:
                                                            #  This means that this entire training routine trains only for the most recent output(!)
           (stateDerivs, weightDerivs) = self.getDerivs(midputs, statesIn, statesOut, stateDerivs, outputDeriv)
           weightDerivss += [weightDerivs]
+          
+          # Next, we average weightDerivss and add them to the weights.
+          pass #...or not.
