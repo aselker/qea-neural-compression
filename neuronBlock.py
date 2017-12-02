@@ -12,7 +12,7 @@ def logDeriv(x):
 
 def letterToList(x):
   index = letters.index(x)
-  return [0]*index + [1] + [0]*(len(letters)-index-1)
+  return np.array([0]*index + [1] + [0]*(len(letters)-index-1))
 
 def listToLetters(xs):
   tuples = [ i for i in list(zip(xs,letters)) ]
@@ -76,7 +76,7 @@ class RecurrentNet:
       nIn = numInputs if i == 0 else layerSpecs[i-1][0]
       nRec = layerSpecs[i][0]
       nOut = layerSpecs[i][1]
-      layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
+      self.layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
 
     # Create starting points for the transferred-state arrays for recurrence
     self.initStates = []
@@ -87,20 +87,20 @@ class RecurrentNet:
   # This changes two pieces of state internal to the object: 'states' is the recurrent thing, and 'midputs' is a record of the outputs of each layer which
   #   are fed into the next layer. Both should be saved if using this to backpropagate. If just using this to evaluate the network, you can ignore both, 
   #   except for initializing 'states' and not modifying it between 'step' calls.
-  def step(inputs):
+  def step(self, inputs):
     self.midputs = [inputs]
     # In here, 'midputs' is the non-recurrent inputs to the next layer
     for i in range(len(self.layers)): #Can't use 'for layer,state in layers,states' cause we have to modify states
       # Do the evaluation
-      outputs = layers[i].evaluate(np.concatenate([self.midputs[i], self.states[i]]))
+      outputs = self.layers[i].evaluate(np.concatenate([self.midputs[i], self.states[i]]))
       # Split the outputs into inputs for the next layer, and new state
-      self.midputs += outputs[:len(inputs)]
+      self.midputs += [outputs[:len(inputs)]]
       self.states[i] = outputs[len(inputs):]
     
     return self.midputs[-1] #The last 'midputs' is the output
 
   # Get the derivatives for training one generation of the network. For use with a more complex, recurrence-conscious training algorithm.
-  def getDerivs(midputs, statesIn, statesOut, stateDerivsOut, outputDeriv):
+  def getDerivs(self, midputs, statesIn, statesOut, stateDerivsOut, outputDeriv):
 
     weightDerivs = [] #List of 2d arrays of weight derivatives. Each adjusts one layer.
     stateDerivsIn = [] #List of 1d arrays, representing the state derivatives for the *previous* generation (thus "in")
@@ -109,11 +109,11 @@ class RecurrentNet:
     for i in reversed(range(len(self.layers))):
       self.layers[i].inputs = np.concatenate([midputs[i], statesIn[i]])
       self.layers[i].outputs = np.concatenate([midputs[i+1], statesOut[i]])
-      (weightDeriv, inputDeriv) = layer.backprop( np.concatenate([outputDeriv, stateDerivsOut[i]]) )
+      (weightDeriv, inputDeriv) = self.layers[i].backprop( np.concatenate([outputDeriv, stateDerivsOut[i]]) )
 
-      weightDerivs += weightDeriv
-      outputDeriv = inputDeriv[:len(inputDeriv)-len(stateDeriv)]
-      stateDerivsIn += inputDeriv[len(inputDeriv)-len(stateDeriv):]
+      weightDerivs += [weightDeriv]
+      outputDeriv = inputDeriv[:-len(stateDerivsOut[i])]
+      stateDerivsIn += [inputDeriv[-len(stateDerivsOut[i]):]]
 
     weightDerivs.reverse()
     stateDerivsIn.reverse()
@@ -121,7 +121,7 @@ class RecurrentNet:
     return(stateDerivsIn, weightDerivs)
   
 
-  def runAndTrain(inputs, targets, k1, k2, learnRate):
+  def runAndTrain(self, inputs, targets, k1, k2, learnRate):
     
     # First, initialize the state. Might train this at some later date?
     self.states = self.initStates
@@ -144,17 +144,17 @@ class RecurrentNet:
       if trainTimer >= k1:
         trainTimer = 0
 
-      stateDerivs = [ np.array([0.] * len(x)) for x in self.states ] #The derivatives of the state outputs are zero to start, because they go off into the future
-      weightDerivss = [] #Double plural ftw
-      
-      for i in range(len(record)):
-        midputs = record[i][0]
-        statesIn = record[i+1][0]
-        statesOut = record[i][0]
-        if i == 0:
-          outputDeriv = errorDeriv 
-        else:
-          outputDeriv = np.array([0] * len(midputs[-1])) #If not the last, don't factor in outputs.
-                                                         #  This means that this entire training routine trains only for the most recent output(!)
-        (stateDerivs, weightDerivs) = getDerivs(midputs, statesIn, statesOut, stateDerivs, )
-        weightDerivss += [weightDerivs]
+        stateDerivs = [ np.array([0.] * len(x)) for x in self.states ] #The derivatives of the state outputs are zero to start, because they go off into the future
+        weightDerivss = [] #Double plural ftw
+        
+        for i in range(len(record)):
+          midputs = record[i][0]
+          statesIn = record[i+1][0]
+          statesOut = record[i][0]
+          if i == 0:
+            outputDeriv = errorDeriv 
+          else:
+            outputDeriv = np.array([0] * len(midputs[-1])) #If not the last, don't factor in outputs.
+                                                           #  This means that this entire training routine trains only for the most recent output(!)
+          (stateDerivs, weightDerivs) = self.getDerivs(midputs, statesIn, statesOut, stateDerivs, outputDeriv)
+          weightDerivss += [weightDerivs]
