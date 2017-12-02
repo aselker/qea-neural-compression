@@ -18,6 +18,10 @@ def listToLetters(xs):
   tuples = [ i for i in list(zip(xs,letters)) ]
   tuples = sorted(tuples, key=lambda x: (-x[0],x[1])) #Sort reverse by first value, forward by second
   return [x[1] for x in tuples] #Return just the letters
+
+def listToFirstLetter(xs):
+  tuples = [ i for i in list(zip(xs,letters)) ]
+  return max(tuples)[1]
   
 
 def printLetterWeights(xs, removeZeros = False):
@@ -134,6 +138,12 @@ class RecurrentNet:
     for (ipt,target) in zip(inputs, targets):
       output = self.step(ipt) #Do the computation
 
+      # Print some useful info
+      print("Desired letter: " + listToFirstLetter(target))
+      print("Guesses: " + ''.join(listToLetters(output)))
+      letterPos = listToLetters(output).index(listToFirstLetter(target))
+      print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
+
       errorDeriv = output - target #Quadratic error function -> linear derivative, like before
 
       record.insert(0, (self.midputs, self.states)) #Add to the records
@@ -159,5 +169,7 @@ class RecurrentNet:
           (stateDerivs, weightDerivs) = self.getDerivs(midputs, statesIn, statesOut, stateDerivs, outputDeriv)
           weightDerivss += [weightDerivs]
           
-          # Next, we average weightDerivss and add them to the weights.
-          pass #...or not.
+          # Next, we average weightDerivss and subtract them to the weights.
+          avgWeightDerivs = np.average(weightDerivss,0)
+          for (layer, deriv) in zip(self.layers, avgWeightDerivs):
+            layer.weights -= deriv * learnRate
