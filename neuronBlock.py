@@ -3,6 +3,7 @@ from math import e
 from random import random
 
 letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
+#letters = "abcd"
 
 def logistic(x):
   return 1/(1 + e**(-x))
@@ -54,6 +55,12 @@ class NeuronBlock:
     return "Weights:\n" + str(self.weights) + "\nLast output:\n" + str(self.outputs)
 
   def evaluate(self, inputs):
+    """
+    print("Inputs: ")
+    print(inputs)
+    print("Weights: ")
+    print(self.weights)
+    """
     self.inputs = np.array(inputs) #Does nothing if the input is already an np.array
     self.outputs = logistic(np.dot(self.inputs, self.weights))
     return self.outputs
@@ -77,7 +84,7 @@ class RecurrentNet:
     # Create the layers
     self.layers = []
     for i in range(len(layerSpecs)):
-      nIn = numInputs if i == 0 else layerSpecs[i-1][0]
+      nIn = numInputs if i == 0 else layerSpecs[i-1][1]
       nRec = layerSpecs[i][0]
       nOut = layerSpecs[i][1]
       self.layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
@@ -108,7 +115,8 @@ class RecurrentNet:
 
     weightDerivs = [] #List of 2d arrays of weight derivatives. Each adjusts one layer.
     stateDerivsIn = [] #List of 1d arrays, representing the state derivatives for the *previous* generation (thus "in")
-    # outputDeriv is initialized by the argument, but changes every iteration.
+    # outputDeriv is initialized by the argument, but changes every iteration. 
+
 
     for i in reversed(range(len(self.layers))):
       self.layers[i].inputs = np.concatenate([midputs[i], statesIn[i]])
@@ -116,8 +124,12 @@ class RecurrentNet:
       (weightDeriv, inputDeriv) = self.layers[i].backprop( np.concatenate([outputDeriv, stateDerivsOut[i]]) )
 
       weightDerivs += [weightDeriv]
-      outputDeriv = inputDeriv[:-len(stateDerivsOut[i])]
-      stateDerivsIn += [inputDeriv[-len(stateDerivsOut[i]):]]
+      if len(stateDerivsOut[i]):
+        outputDeriv = inputDeriv[:-len(stateDerivsOut[i])]
+        stateDerivsIn += [inputDeriv[-len(stateDerivsOut[i]):]]
+      else:
+        outputDeriv = inputDeriv
+        stateDerivsIn += [[]]
 
     weightDerivs.reverse()
     stateDerivsIn.reverse()
@@ -144,7 +156,9 @@ class RecurrentNet:
       letterPos = listToLetters(output).index(listToFirstLetter(target))
       print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
 
-      errorDeriv = output - target #Quadratic error function -> linear derivative, like before
+      errorDeriv = output - target #Quadratic error function -> linear derivative, like before. This is only used if this happens to be a training iteration.
+      print("Errors derivative:")
+      print(errorDeriv)
 
       record.insert(0, (self.midputs, self.states)) #Add to the records
       if len(record) > k2+1: #If we have enough records, start throwing out the old ones
@@ -159,8 +173,8 @@ class RecurrentNet:
         
         for i in range(k2):
           midputs = record[i][0]
-          statesIn = record[i+1][0]
-          statesOut = record[i][0]
+          statesIn = record[i+1][1]
+          statesOut = record[i][1]
           if i == 0:
             outputDeriv = errorDeriv 
           else:
@@ -173,3 +187,7 @@ class RecurrentNet:
           avgWeightDerivs = np.average(weightDerivss,0)
           for (layer, deriv) in zip(self.layers, avgWeightDerivs):
             layer.weights -= deriv * learnRate
+          #print("Weight derivatives:")
+          #print(avgWeightDerivs)
+          #print("New weights:")
+          #print([x.weights for x in self.layers])
