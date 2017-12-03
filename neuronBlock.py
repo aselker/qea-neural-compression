@@ -1,19 +1,38 @@
 import numpy as np #full of numps
-from math import e
 from random import random
 
-letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
-#letters = "abcd"
+#letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
+letters = "abcdefghijklmnopqrstuvwxyz _"
+#letters = "abcdefghij"
+lowState = -0.5
+highState = 0.5
 
-def logistic(x):
-  return 1/(1 + e**(-x))
+verbose = False
 
-def logDeriv(x):
-  return logistic(x) * (1 - logistic(x))
+
+"""
+def activFunc(x):
+  return 1/(1 + np.exp(-x))
+
+def activDeriv(x):
+  return activFunc(x) * (1 - activFunc(x))
+"""
+"""
+def activFunc(x): 
+  return np.log(1 + np.exp(x)) #Softplus function
+
+def activDeriv(x):
+  return 1/(1 + np.exp(-x))
+"""
+
+activFunc = np.tanh
+
+activDeriv = lambda x: 1 - np.power(np.tanh(x),2)
+  
 
 def letterToList(x):
   index = letters.index(x)
-  return np.array([0]*index + [1] + [0]*(len(letters)-index-1))
+  return np.array([lowState]*index + [highState] + [lowState]*(len(letters)-index-1))
 
 def listToLetters(xs):
   tuples = [ i for i in list(zip(xs,letters)) ]
@@ -48,26 +67,29 @@ class NeuronBlock:
   def __init__(self, numInputs, numOutputs):
     self.inputs = np.array([0.] * numInputs)
     self.outputs = np.array([0.] * numOutputs)
-    #self.weights = np.array([[1.] * numOutputs] * numInputs)
-    self.weights = np.array([[random() for _ in range(numOutputs)] for _ in range(numInputs)])
+    self.weights = np.array([[random() for _ in range(numOutputs)] for _ in range(numInputs)]) #Initialize with random weights
 
   def __str__(self):
     return "Weights:\n" + str(self.weights) + "\nLast output:\n" + str(self.outputs)
 
   def evaluate(self, inputs):
-    """
-    print("Inputs: ")
-    print(inputs)
-    print("Weights: ")
-    print(self.weights)
-    """
     self.inputs = np.array(inputs) #Does nothing if the input is already an np.array
-    self.outputs = logistic(np.dot(self.inputs, self.weights))
+    self.outputs = activFunc(np.dot(self.inputs, self.weights))
+    if verbose:
+      print("Layer inputs: ")
+      print(self.inputs)
+      print("Layer weights: ")
+      print(self.weights)
+      print("Layer outputs: ")
+      print(self.outputs)
     return self.outputs
 
   # Backpropagate, find the derivatives for internal weights and for inputs. Don't actually change anything.
   def backprop(self, outDerivs):
-    connDerivs = outDerivs * logDeriv(self.outputs)
+    if verbose:
+      print("Output derivatives:")
+      print(outDerivs)
+    connDerivs = outDerivs * activDeriv(self.inputs) # !!!!!! Should this be self.inputs or self.outputs ?
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
     inputDerivs = np.dot(self.weights, connDerivs)
 
@@ -146,19 +168,24 @@ class RecurrentNet:
     record = [] #Tuples of the form (states, midputs), from a particular generation
     trainTimer = 0 #Iterations since last training; when this hits k1 we train
 
+
     # Now loop through the inputs, evaluating, saving states, and sometimes training.
     for (ipt,target) in zip(inputs, targets):
+      print("\nStarting new iteration.")
+
       output = self.step(ipt) #Do the computation
 
       # Print some useful info
       print("Desired letter: " + listToFirstLetter(target))
-      print("Guesses: " + ''.join(listToLetters(output)))
+      print("Guesses:           " + ''.join(listToLetters(output)))
       letterPos = listToLetters(output).index(listToFirstLetter(target))
       print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
 
+      #print("Outputs:")
+      #print(output)
       errorDeriv = output - target #Quadratic error function -> linear derivative, like before. This is only used if this happens to be a training iteration.
-      print("Errors derivative:")
-      print(errorDeriv)
+      #print("Errors derivative:")
+      #print(errorDeriv)
 
       record.insert(0, (self.midputs, self.states)) #Add to the records
       if len(record) > k2+1: #If we have enough records, start throwing out the old ones
