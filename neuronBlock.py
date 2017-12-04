@@ -4,13 +4,16 @@ from random import random
 #letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
 letters = "abcdefghijklmnopqrstuvwxyz _"
 #letters = "ab"
-lowState = -0.5
-highState = 0.5
+lowState = -0.0
+highState = 1.0
 
 verboseEval = 0
-verboseTrain = 1 
+verboseTrain = 0
 printOutputs = 1
+quietOutputs = 1
 writeInitState = 0
+
+printAvgTime = 256
 
 """
 def activFunc(x):
@@ -26,11 +29,13 @@ def activFunc(x):
 def activDeriv(x):
   return 1/(1 + np.exp(-x))
 """ 
-
 activFunc = np.tanh #tanh activation function
 
 activDeriv = lambda x: 1 - np.power(np.tanh(x),2)
-
+"""
+activFunc = lambda xs: np.array([(0 if x<0 else x) for x in xs])
+activDeriv = lambda xs: np.array([(0 if x<0 else 1) for x in xs])
+"""
   
 
 def letterToList(x):
@@ -160,7 +165,7 @@ class RecurrentNet:
       (weightDeriv, inputDeriv) = self.layers[i].backprop( np.concatenate([outputDeriv, stateDerivsOut[i]]) )
 
       weightDerivs += [weightDeriv]
-      if len(stateDerivsOut[i]):
+      if len(stateDerivsOut[i]) > 0:
         outputDeriv = inputDeriv[:-len(stateDerivsOut[i])]
         stateDerivsIn += [inputDeriv[-len(stateDerivsOut[i]):]]
       else:
@@ -182,18 +187,32 @@ class RecurrentNet:
     record = [] #Tuples of the form (states, midputs), from a particular generation
     trainTimer = 0 #Iterations since last training; when this hits k1 we train
 
-
+    if printOutputs:
+      printTimer = 0
+      letterPosAvg = 0
     # Now loop through the inputs, evaluating, saving states, and sometimes training.
     for (ipt,target) in zip(inputs, targets):
 
       output = self.step(ipt) #Do the computation
 
       if printOutputs:
-        print("\nStarting new iteration.")
-        print("Desired letter: " + listToFirstLetter(target))
-        print("Guesses:           " + ''.join(listToLetters(output)))
         letterPos = listToLetters(output).index(listToFirstLetter(target))
-        print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
+
+        if not quietOutputs:
+          if verboseEval or verboseTrain:
+            print("\nStarting new iteration.")
+          print("Desired letter: " + listToFirstLetter(target))
+          print("Guesses:           " + ''.join(listToLetters(output)))
+          print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
+        else:
+          letterPosAvg += letterPos
+          if printTimer > 256:
+            letterPosAvg = letterPosAvg/256
+            print("Letter position avg: " + str(int(letterPosAvg)) + (' ' if int(letterPosAvg) > 9 else '  ') + '#'*int(letterPosAvg*5))
+            letterPosAvg = 0
+            printTimer = 0
+          printTimer += 1
+
 
       errorDeriv = output - target #Quadratic error function -> linear derivative, like before. This is only used if this happens to be a training iteration.
 
@@ -212,7 +231,7 @@ class RecurrentNet:
         weightDerivss = [] #Double plural ftw
         
         #Backpropagate backward through time.
-        for i in range(k2):
+        for i in range(min(k2, len(record)-1)):
           midputs = record[i][0]
           statesIn = record[i+1][1]
           statesOut = record[i][1]
