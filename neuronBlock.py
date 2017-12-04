@@ -3,12 +3,14 @@ from random import random
 
 #letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
 letters = "abcdefghijklmnopqrstuvwxyz _"
-#letters = "abcdefghij"
+#letters = "ab"
 lowState = -0.5
 highState = 0.5
 
-verbose = False
-
+verboseEval = 0
+verboseTrain = 1 
+printOutputs = 1
+writeInitState = 0
 
 """
 def activFunc(x):
@@ -19,15 +21,16 @@ def activDeriv(x):
 """
 """
 def activFunc(x): 
-  return np.log(1 + np.exp(x)) #Softplus function
+  return np.log(1 + np.exp(x)) #Softplus / smooth ReLU
 
 def activDeriv(x):
   return 1/(1 + np.exp(-x))
-"""
+""" 
 
-activFunc = np.tanh
+activFunc = np.tanh #tanh activation function
 
 activDeriv = lambda x: 1 - np.power(np.tanh(x),2)
+
   
 
 def letterToList(x):
@@ -67,7 +70,7 @@ class NeuronBlock:
   def __init__(self, numInputs, numOutputs):
     self.inputs = np.array([0.] * numInputs)
     self.outputs = np.array([0.] * numOutputs)
-    self.weights = np.array([[random() for _ in range(numOutputs)] for _ in range(numInputs)]) #Initialize with random weights
+    self.weights = np.array([[random() - 0.5 for _ in range(numOutputs)] for _ in range(numInputs)]) #Initialize with random weights
 
   def __str__(self):
     return "Weights:\n" + str(self.weights) + "\nLast output:\n" + str(self.outputs)
@@ -75,21 +78,28 @@ class NeuronBlock:
   def evaluate(self, inputs):
     self.inputs = np.array(inputs) #Does nothing if the input is already an np.array
     self.outputs = activFunc(np.dot(self.inputs, self.weights))
-    if verbose:
+
+    if verboseEval:
       print("Layer inputs: ")
       print(self.inputs)
       print("Layer weights: ")
       print(self.weights)
       print("Layer outputs: ")
       print(self.outputs)
+
     return self.outputs
 
   # Backpropagate, find the derivatives for internal weights and for inputs. Don't actually change anything.
   def backprop(self, outDerivs):
-    if verbose:
-      print("Output derivatives:")
+    outputsBeforeActiv = np.dot(self.inputs, self.weights)
+
+    if verboseTrain:
+      print("Output+recurrent derivatives:")
       print(outDerivs)
-    connDerivs = outDerivs * activDeriv(self.inputs) # !!!!!! Should this be self.inputs or self.outputs ?
+      print("Outputs before activation function:")
+      print(outputsBeforeActiv)
+    
+    connDerivs = outDerivs * activDeriv(outputsBeforeActiv) 
     weightDerivs = np.dot(np.transpose([self.inputs]), [connDerivs])
     inputDerivs = np.dot(self.weights, connDerivs)
 
@@ -98,7 +108,7 @@ class NeuronBlock:
 
 # Defines a multi-layered recurrent neural net.
 # numInputs is the number of inputs to the first layer.
-# layerSpecs is a list of tuples.  Each tuple is (recurrent in/outputs, connections to the next layer).
+# layerSpecs is a list of tuples.  Each tuple is (connections to the next layer, recurrent in/outputs).
 # the last item in layerSpecs also defines the output neuron count (its next-layer connections go to the output).
 class RecurrentNet:
   def __init__(self, numInputs, layerSpecs):
@@ -106,20 +116,24 @@ class RecurrentNet:
     # Create the layers
     self.layers = []
     for i in range(len(layerSpecs)):
-      nIn = numInputs if i == 0 else layerSpecs[i-1][1]
-      nRec = layerSpecs[i][0]
-      nOut = layerSpecs[i][1]
+      nIn = numInputs if i == 0 else layerSpecs[i-1][0]
+      nRec = layerSpecs[i][1]
+      nOut = layerSpecs[i][0]
       self.layers += [ NeuronBlock(nIn + nRec, nOut + nRec) ]
 
     # Create starting points for the transferred-state arrays for recurrence
     self.initStates = []
     for spec in layerSpecs:
-      self.initStates += [ np.array([random() for _ in range(spec[0])]) ] #Each is initialized with random numbers. Later this might get trained.
+      self.initStates += [ np.array([random() - 0.5 for _ in range(spec[1])]) ] #Each is initialized with random numbers. Later this might get trained.
+    
+    if writeInitState:
+      with open("initStates.txt", 'w') as f:
+        f.write(str(self.initStates))
 
   # "Step" the network, taking input, consuming and re-producing state, and producting output. Does not train.
   # This changes two pieces of state internal to the object: 'states' is the recurrent thing, and 'midputs' is a record of the outputs of each layer which
   #   are fed into the next layer. Both should be saved if using this to backpropagate. If just using this to evaluate the network, you can ignore both, 
-  #   except for initializing 'states' and not modifying it between 'step' calls.
+  #   except for initializing 'states' and not modifying it between calls to 'step'.
   def step(self, inputs):
     self.midputs = [inputs]
     # In here, 'midputs' is the non-recurrent inputs to the next layer
@@ -171,33 +185,33 @@ class RecurrentNet:
 
     # Now loop through the inputs, evaluating, saving states, and sometimes training.
     for (ipt,target) in zip(inputs, targets):
-      print("\nStarting new iteration.")
 
       output = self.step(ipt) #Do the computation
 
-      # Print some useful info
-      print("Desired letter: " + listToFirstLetter(target))
-      print("Guesses:           " + ''.join(listToLetters(output)))
-      letterPos = listToLetters(output).index(listToFirstLetter(target))
-      print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
+      if printOutputs:
+        print("\nStarting new iteration.")
+        print("Desired letter: " + listToFirstLetter(target))
+        print("Guesses:           " + ''.join(listToLetters(output)))
+        letterPos = listToLetters(output).index(listToFirstLetter(target))
+        print("Letter position: " + str(letterPos) + (' ' if letterPos>9 else '  ') + '#'*letterPos)
 
-      #print("Outputs:")
-      #print(output)
       errorDeriv = output - target #Quadratic error function -> linear derivative, like before. This is only used if this happens to be a training iteration.
-      #print("Errors derivative:")
-      #print(errorDeriv)
 
       record.insert(0, (self.midputs, self.states)) #Add to the records
       if len(record) > k2+1: #If we have enough records, start throwing out the old ones
-        record = record[:k2+1] #We keep k2+1 records for some reason. Too tired to figure out right now.
+        record = record[:k2+1] #We keep k2+1 records because we need in and out for k2 iterations.
 
       trainTimer += 1
       if trainTimer >= k1:
         trainTimer = 0
 
+        if verboseTrain:
+          print("\nNew training iteration.")
+
         stateDerivs = [ np.array([0.] * len(x)) for x in self.states ] #The derivatives of the state outputs are zero to start, because they go off into the future
         weightDerivss = [] #Double plural ftw
         
+        #Backpropagate backward through time.
         for i in range(k2):
           midputs = record[i][0]
           statesIn = record[i+1][1]
@@ -210,11 +224,7 @@ class RecurrentNet:
           (stateDerivs, weightDerivs) = self.getDerivs(midputs, statesIn, statesOut, stateDerivs, outputDeriv)
           weightDerivss += [weightDerivs]
           
-          # Next, we average weightDerivss and subtract them to the weights.
-          avgWeightDerivs = np.average(weightDerivss,0)
-          for (layer, deriv) in zip(self.layers, avgWeightDerivs):
-            layer.weights -= deriv * learnRate
-          #print("Weight derivatives:")
-          #print(avgWeightDerivs)
-          #print("New weights:")
-          #print([x.weights for x in self.layers])
+        # Next, we average weightDerivss and subtract them to the weights.
+        avgWeightDerivs = np.average(weightDerivss,0)
+        for (layer, deriv) in zip(self.layers, avgWeightDerivs):
+          layer.weights -= deriv * learnRate
