@@ -1,17 +1,17 @@
 #!/usr/bin/python3
 from neuronBlock import *
 
-learningRate = 0.01
-k1 = 2 
-k2 = 9
+learningRate = 0.004
+k1 = 4 
+k2 = 32
 
 numInputs = len(letters)
-layerSpec = [(len(letters),16)]*6
+layerSpec = [(len(letters),32)]*8
 
 network = RecurrentNet(numInputs, layerSpec)
 
 with open('moby_dick_cleaned.txt') as f:
-  text = f.read()[1:500000]
+  text = f.read()[1:800000]
   #text = "aaaab" * 1000 #Note that if the string length is not coprime with k1, bad things happen
   
   inputs = [letterToList(x) for x in text][:-1]
