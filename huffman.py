@@ -37,19 +37,27 @@ class Node:
     return Node(left = self, right = other)
 
 
-  def traverse(self, value):
+  def encode(self, value):
     if self.value == value:
       return ""
     elif self.value != None:
       return False
     else:
-      leftString = self.left.traverse(value)
+      leftString = self.left.encode(value)
       if leftString != False: #Can't use "if leftString" because the empty string is cast to false
         return "0" + leftString
-      rightString = self.right.traverse(value)
+      rightString = self.right.encode(value)
       if rightString != False:
         return "1" + rightString
       return False
+
+  def decode(self, bits):
+    if bits == "":
+      return self.value
+    elif bits[0] == "0":
+      return self.left.decode(bits[1:])
+    elif bits[0] == "1":
+      return self.right.decode(bits[1:])
 
 
 def makeTree(xs):
@@ -71,11 +79,11 @@ def makeTree(xs):
       newNode = first.merge(queue.get(block=False))
       queue.put(newNode)
 
-
 """
 x = [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4), (5, 0.5), (6, 0.6)]
 tree = makeTree(x)
 print(tree)
 
-print(tree.traverse(3))
+code = tree.encode(2)
+print(tree.decode(code))
 """
