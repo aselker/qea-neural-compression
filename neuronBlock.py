@@ -11,7 +11,6 @@ verboseEval = 0
 verboseTrain = 0
 printOutputs = 1
 quietOutputs = 1
-writeInitState = 0
 
 printAvgTime = 256
 
@@ -43,7 +42,7 @@ def letterToList(x):
   return np.array([lowState]*index + [highState] + [lowState]*(len(letters)-index-1))
 
 def listToLetters(xs):
-  tuples = [ i for i in list(zip(xs,letters)) ]
+  tuples = list(zip(xs,letters))
   tuples = sorted(tuples, key=lambda x: (-x[0],x[1])) #Sort reverse by first value, forward by second
   return [x[1] for x in tuples] #Return just the letters
 
@@ -131,9 +130,6 @@ class RecurrentNet:
     for spec in layerSpecs:
       self.initStates += [ np.array([random() - 0.5 for _ in range(spec[1])]) ] #Each is initialized with random numbers. Later this might get trained.
     
-    if writeInitState:
-      with open("initStates.txt", 'w') as f:
-        f.write(str(self.initStates))
 
   # "Step" the network, taking input, consuming and re-producing state, and producting output. Does not train.
   # This changes two pieces of state internal to the object: 'states' is the recurrent thing, and 'midputs' is a record of the outputs of each layer which
@@ -247,3 +243,11 @@ class RecurrentNet:
         avgWeightDerivs = np.average(weightDerivss,0)
         for (layer, deriv) in zip(self.layers, avgWeightDerivs):
           layer.weights -= deriv * learnRate
+
+
+  def run(self, inputs):
+    self.states = self.initStates
+    outputs = []
+    for ipt in inputs:
+      outputs += self.step(ipt)
+    return outputs
