@@ -6,7 +6,7 @@ k1 = 4
 k2 = 32
 
 numInputs = len(letters)
-layerSpec = [(len(letters),32)]*8
+layerSpec = [(len(letters),24)]*6
 
 network = RecurrentNet(numInputs, layerSpec)
 
