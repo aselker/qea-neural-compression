@@ -4,8 +4,8 @@ from random import random
 #letters = "abcdefghijklmnopqrstuvwxyz !\"'()*,-./0123456789:;?_" #Something like ASCII order
 letters = "abcdefghijklmnopqrstuvwxyz _"
 #letters = "ab"
-lowState = -0.0
-highState = 1.0
+lowState = -0.5
+highState = 0.5
 
 verboseEval = 0
 verboseTrain = 0
