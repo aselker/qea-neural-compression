@@ -4,12 +4,19 @@ import pickle
 from neuronBlock import *
 from huffman import *
 
+def normalize(xs):
+  offset = min(xs)
+  xs = [x - offset for x in xs]
+  scale = max(xs)
+  xs = [x / scale for x in xs]
+  return xs
+
 if len(sys.argv) != 4:
   print("Usage: compress.py inputFile networkFilename huffmanFilename")
   sys.exit(2)
 
 learningRate = 0.004
-k1 = 4 
+k1 = 1 
 k2 = 32
 
 numInputs = len(letters)
@@ -27,7 +34,7 @@ with open(sys.argv[1]) as f:
   network.runAndTrain(inputs, targets, k1, k2, learningRate)
 
   # Serialize and save the trained network
-  with open(sys.argv[2]) as f2:
+  with open(sys.argv[2], 'wb') as f2:
     pickle.dump(network, f2)
 
   # Get the predictions
@@ -35,7 +42,9 @@ with open(sys.argv[1]) as f:
 
   # Huffman-code the letters
   huffmanCodes = []
-  for (prediction, target) in zip(predictions, targets):
-    tree = makeTree(list(zip(letters, prediction))) #Letter first, likelihood second
-    huffmanCodes += tree.encode(target)
+  for (prediction, actual) in zip(predictions, text):
+    tree = makeTree(list(zip(letters, normalize(prediction)))) #Letter first, likelihood second
+    huffmanCodes += tree.encode(actual)
   
+  with open(sys.argv[3], 'w') as f3:
+    f3.write(''.join(huffmanCodes))

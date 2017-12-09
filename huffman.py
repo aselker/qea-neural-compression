@@ -78,7 +78,6 @@ def makeTree(xs):
     else:
       newNode = first.merge(queue.get(block=False))
       queue.put(newNode)
-
 """
 x = [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4), (5, 0.5), (6, 0.6)]
 tree = makeTree(x)

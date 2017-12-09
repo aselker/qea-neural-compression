@@ -181,7 +181,7 @@ class RecurrentNet:
     
     # Next, set up some variables for training...
     record = [] #Tuples of the form (states, midputs), from a particular generation
-    trainTimer = 0 #Iterations since last training; when this hits k1 we train
+    trainTimer = -1 #Iterations since last training; when this hits k1 we train. Start at -1 to avoid first-iteration weirdness.
 
     if printOutputs:
       printTimer = 0
@@ -240,7 +240,11 @@ class RecurrentNet:
           weightDerivss += [weightDerivs]
           
         # Next, we average weightDerivss and subtract them to the weights.
+        #if len(weightDerivss) == 1:
+        #  avgWeightDerivs = weightDerivss[0]
+        #else:
         avgWeightDerivs = np.average(weightDerivss,0)
+
         for (layer, deriv) in zip(self.layers, avgWeightDerivs):
           layer.weights -= deriv * learnRate
 
@@ -249,5 +253,5 @@ class RecurrentNet:
     self.states = self.initStates
     outputs = []
     for ipt in inputs:
-      outputs += self.step(ipt)
+      outputs += [self.step(ipt)]
     return outputs
