@@ -69,6 +69,12 @@ def ngramToList(ngram):
 def textToTrainingPairs(text, n):
   return [ (ngramToList(text[i:i+n]), letterToList(text[i+n])) for i in range(len(text) - n) ]
 
+def normalize(xs):
+  offset = min(xs)
+  xs = [x - offset for x in xs]
+  scale = max(xs)
+  xs = [x / scale for x in xs]
+  return xs
 
 class NeuronBlock:
   def __init__(self, numInputs, numOutputs):

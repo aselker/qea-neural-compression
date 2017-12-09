@@ -52,8 +52,8 @@ class Node:
       return False
 
   def decode(self, bits):
-    if bits == "":
-      return self.value
+    if self.value != None:
+      return (self.value, bits)
     elif bits[0] == "0":
       return self.left.decode(bits[1:])
     elif bits[0] == "1":
@@ -78,11 +78,12 @@ def makeTree(xs):
     else:
       newNode = first.merge(queue.get(block=False))
       queue.put(newNode)
-"""
-x = [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4), (5, 0.5), (6, 0.6)]
-tree = makeTree(x)
-print(tree)
 
-code = tree.encode(2)
-print(tree.decode(code))
-"""
+if __name__ == "__main__":
+  x = [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4), (5, 0.5), (6, 0.6)]
+  tree = makeTree(x)
+  print(tree)
+
+  code = tree.encode(2)
+  print(tree.decode(code + "01"))
+

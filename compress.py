@@ -1,18 +1,12 @@
 #!/usr/bin/python3
+
 import sys
 import pickle
 from neuronBlock import *
 from huffman import *
 
-def normalize(xs):
-  offset = min(xs)
-  xs = [x - offset for x in xs]
-  scale = max(xs)
-  xs = [x / scale for x in xs]
-  return xs
-
 if len(sys.argv) != 4:
-  print("Usage: compress.py inputFile networkFilename huffmanFilename")
+  print("Usage: compress.py inputFile networkFile huffmanFile")
   sys.exit(2)
 
 learningRate = 0.004
