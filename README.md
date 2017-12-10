@@ -1,6 +1,6 @@
 ### Neural Compression
 
-This is an algorithm designed to compress text using a neural network and Huffman codings.  It is written in pure Python, using Numpy.  It was created for QEA at Olin College in 2017.  The algorithm is not complete, at the moment; all of the components exist, but they have not been integrated together.  Consider it above all an educational tool.  
+This is an algorithm designed to compress text using a neural network and Huffman codings.  It is written in pure Python, using Numpy.  It was created for QEA at Olin College in 2017.  Currently, the algorithm does not work; consider it an educational tool above all.  
 
 The algorithm compresses text in three steps, and decompresses it in two.  The compressed data consists of a series of Huffman-coded letters and the weights for a neural network; the details of how these are created and then used will be covered in the next few sections.  
 
@@ -27,5 +27,7 @@ To recover the compressed corpus, a neural network is constructed that is identi
 Because an accurate prediction means that the Huffman-coded letter will take less space to store, creating a smaller file relies on the network being effective at predicting letters.  This does not, however, affect the accuracy of the decompressed file, which is always lossless.  As long as each prediction at compression time can be repeated at decompression time, the Huffman trees will be identical, and so will the files.
 
 ### Performance
+
+The algorithm does not work.  Small errors accumulate in the evaluation of the network in the decompression phase, leading to a garbled output.  This is probably because of inherent imprecision in floating-point arithmetic, which should not be relied upon to have repeatable results.
 
 The algorithm's performance, in terms of compression ratio and speed, has not yet been measured.  Right now the compression ratio is probably abysmal compared to well-established algorithms like DEFLATE, and may in fact be worse than no compression at all, after including the stored connection weights. Performance is closely tied to the neural network's success at predicting the text, which is currently low.  Replacing the network half of the backend with a more performant, better-tuned piece of software such as Pytorch could greatly improve both compression ratio and speed.
