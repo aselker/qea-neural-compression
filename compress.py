@@ -10,8 +10,9 @@ if len(sys.argv) != 4:
   sys.exit(2)
 
 learningRate = 0.004
-k1 = 1 
+k1 = 4 
 k2 = 32
+learnIterations = 1
 
 numInputs = len(letters)
 layerSpec = [(len(letters),24)]*6
@@ -25,14 +26,22 @@ with open(sys.argv[1]) as f:
   targets = [letterToList(x) for x in text][1:]
   
   # Train the network
-  network.runAndTrain(inputs, targets, k1, k2, learningRate)
+  for _ in range(learnIterations):
+    network.runAndTrain(inputs, targets, k1, k2, learningRate)
 
   # Serialize and save the trained network
   with open(sys.argv[2], 'wb') as f2:
     pickle.dump(network, f2)
+  with open(sys.argv[2], 'rb') as f2:
+    otherNet = pickle.load(f2)
 
   # Get the predictions
   predictions = network.run(inputs) #Don't pass it the last letter, because what would the prediction be for?
+  for (first, second) in zip(predictions, otherNet.run(inputs)):
+    print(np.linalg.norm(np.array(first) - np.array(second)))
+  
+  with open("predictions", 'wb') as f3:
+    pickle.dump(predictions, f3)
 
   # Huffman-code the letters
   huffmanCodes = []

@@ -54,6 +54,8 @@ class Node:
   def decode(self, bits):
     if self.value != None:
       return (self.value, bits)
+    elif bits == "":
+      return ("","")
     elif bits[0] == "0":
       return self.left.decode(bits[1:])
     elif bits[0] == "1":

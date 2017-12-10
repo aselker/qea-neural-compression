@@ -15,12 +15,24 @@ with open(sys.argv[1], 'rb') as f:
 with open(sys.argv[2], 'r') as f:
   codings = f.read()
 
+with open("predictions", "rb") as f:
+  oldPredictions = pickle.load(f)
+
 out = ""
+
 network.states = network.initStates
 nextIn = " "
+newPredictions = []
 
 while codings:
-  prediction = network.step(letterToList(nextIn))
+  newPrediction = network.step(letterToList(nextIn))
+  newPredictions += [newPrediction]
+  tree = makeTree(list(zip(letters, normalize(newPrediction))))
+  (nextIn, codings) = tree.decode(codings)
+  out += nextIn
+
+
+for prediction in oldPredictions:
   tree = makeTree(list(zip(letters, normalize(prediction))))
   (nextIn, codings) = tree.decode(codings)
   out += nextIn
